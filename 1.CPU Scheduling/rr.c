@@ -1,152 +1,65 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-
-// Structure to represent a process
-typedef struct {
-    int pid;        // Process ID
-    int at;         // Arrival Time
-    int bt;         // Burst Time
-    int priority;   // Priority (lower value = higher priority)
-    int ct;         // Completion Time
-    int tat;        // Turnaround Time
-    int wt;         // Waiting Time
-    int remaining;  // Remaining burst time (for RR)
-} Process;
-
-// Function to calculate and display results
-void displayResults(Process p[], int n) {
-    printf("\nPID\tAT\tBT\tCT\tTAT\tWT\n");
-    float total_tat = 0, total_wt = 0;
-    
-    for(int i = 0; i < n; i++) {
-        p[i].tat = p[i].ct - p[i].at;
-        p[i].wt = p[i].tat - p[i].bt;
-        total_tat += p[i].tat;
-        total_wt += p[i].wt;
-        
-        printf("%d\t%d\t%d\t%d\t%d\t%d\n", 
-               p[i].pid, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
-    }
-    
-    printf("\nAverage Turnaround Time: %.2f", total_tat/n);
-    printf("\nAverage Waiting Time: %.2f\n", total_wt/n);
-}
-
-void roundRobin(Process p[], int n, int quantum) {
-    printf("\n=== ROUND ROBIN SCHEDULING (Quantum=%d) ===\n", quantum);
-    
-    int current_time = 0, completed = 0;
-    int queue[100], front = 0, rear = 0;
-    int visited[n];
-    
-    for(int i = 0; i < n; i++) {
-        p[i].remaining = p[i].bt;
-        visited[i] = 0;
-    }
-    
-    // Add first process to queue (assuming at least one process at time 0 or sorting)
-    // A more robust way would be to sort by AT first, or find the first arriving process
-    // This implementation assumes P[0] is the first to check.
-    
-    // Let's find the first process to arrive to start the queue
-    int first_idx = 0;
-    for(int i = 1; i < n; i++) {
-        if(p[i].at < p[first_idx].at) {
-            first_idx = i;
-        }
-    }
-    current_time = p[first_idx].at;
-    queue[rear++] = first_idx;
-    visited[first_idx] = 1;
-
-
-    while(completed != n) {
-        if(front == rear) {
-            // Queue is empty, check for new arrivals
-            int all_done = 1;
-            for(int i=0; i<n; i++) {
-                if(p[i].remaining > 0) all_done = 0;
-            }
-            if(all_done) break;
-
-            current_time++;
-            for(int i = 0; i < n; i++) {
-                if(p[i].at <= current_time && !visited[i] && p[i].remaining > 0) {
-                    queue[rear++] = i;
-                    visited[i] = 1;
-                }
-            }
-            continue;
-        }
-        
-        int idx = queue[front++];
-        
-        if(p[idx].remaining <= quantum) {
-            current_time += p[idx].remaining;
-            p[idx].remaining = 0;
-            p[idx].ct = current_time;
-            completed++;
-        } else {
-            current_time += quantum;
-            p[idx].remaining -= quantum;
-        }
-        
-        // Add newly arrived processes to queue
-        for(int i = 0; i < n; i++) {
-            if(p[i].at <= current_time && !visited[i] && p[i].remaining > 0) {
-                queue[rear++] = i;
-                visited[i] = 1;
-            }
-        }
-        
-        // Re-add current process if not completed
-        if(p[idx].remaining > 0) {
-            queue[rear++] = idx;
-        }
-    }
-    
-    displayResults(p, n);
-}
 
 int main() {
     int n, quantum;
     printf("Enter number of processes: ");
-    if(scanf("%d", &n) != 1 || n <= 0) {
-        printf("Invalid number of processes.\n");
-        return 1;
-    }
-
+    scanf("%d", &n);
     printf("Enter time quantum: ");
-    if(scanf("%d", &quantum) != 1 || quantum <= 0) {
-        printf("Invalid time quantum.\n");
-        return 1;
-    }
+    scanf("%d", &quantum);
 
-    Process *p = (Process *)malloc(sizeof(Process) * n);
-    if(!p) {
-        printf("Memory allocation failed.\n");
-        return 1;
-    }
+    int pid[20], at[20], bt[20], rt[20], ct[20], tat[20], wt[20];
+    float avg_tat = 0, avg_wt = 0;
 
     for(int i = 0; i < n; i++) {
-        p[i].pid = i + 1;
-        printf("Enter arrival time and burst time for process %d: ", p[i].pid);
-        if(scanf("%d %d", &p[i].at, &p[i].bt) != 2) {
-            printf("Invalid input.\n");
-            free(p);
-            return 1;
-        }
-        p[i].priority = 0;
-        p[i].ct = 0;
-        p[i].tat = 0;
-        p[i].wt = 0;
-        p[i].remaining = p[i].bt;
+        pid[i] = i + 1;
+        printf("Enter Arrival Time and Burst Time for P%d: ", i + 1);
+        scanf("%d%d", &at[i], &bt[i]);
+        rt[i] = bt[i];  // remaining time
     }
 
-    roundRobin(p, n, quantum);
+    int completed = 0, current_time = 0;
+    int done[20] = {0};
 
-    free(p);
+    // Continue until all processes complete
+    while(completed < n) {
+        int all_idle = 1;
+        for(int i = 0; i < n; i++) {
+            if(rt[i] > 0 && at[i] <= current_time) {
+                all_idle = 0;
+
+                if(rt[i] <= quantum) {
+                    current_time += rt[i];
+                    rt[i] = 0;
+                    ct[i] = current_time;
+                    completed++;
+                } else {
+                    rt[i] -= quantum;
+                    current_time += quantum;
+                }
+
+                // Check for new arrivals before continuing
+                for(int j = 0; j < n; j++) {
+                    if(at[j] <= current_time && rt[j] > 0) {
+                        done[j] = 0;
+                    }
+                }
+            }
+        }
+
+        if(all_idle) current_time++;  // CPU idle if nothing has arrived yet
+    }
+
+    printf("\nPID\tAT\tBT\tCT\tTAT\tWT\n");
+    for(int i = 0; i < n; i++) {
+        tat[i] = ct[i] - at[i];
+        wt[i] = tat[i] - bt[i];
+        avg_tat += tat[i];
+        avg_wt += wt[i];
+        printf("%d\t%d\t%d\t%d\t%d\t%d\n", pid[i], at[i], bt[i], ct[i], tat[i], wt[i]);
+    }
+
+    printf("\nAverage Turnaround Time: %.2f", avg_tat / n);
+    printf("\nAverage Waiting Time: %.2f\n", avg_wt / n);
+
     return 0;
 }
-

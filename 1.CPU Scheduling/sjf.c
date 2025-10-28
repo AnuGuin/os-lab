@@ -1,102 +1,55 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <limits.h>
-
-// Structure to represent a process
-typedef struct {
-    int pid;        // Process ID
-    int at;         // Arrival Time
-    int bt;         // Burst Time
-    int priority;   // Priority (lower value = higher priority)
-    int ct;         // Completion Time
-    int tat;        // Turnaround Time
-    int wt;         // Waiting Time
-    int remaining;  // Remaining burst time (for RR)
-} Process;
-
-// Function to calculate and display results
-void displayResults(Process p[], int n) {
-    printf("\nPID\tAT\tBT\tCT\tTAT\tWT\n");
-    float total_tat = 0, total_wt = 0;
-    
-    for(int i = 0; i < n; i++) {
-        p[i].tat = p[i].ct - p[i].at;
-        p[i].wt = p[i].tat - p[i].bt;
-        total_tat += p[i].tat;
-        total_wt += p[i].wt;
-        
-        printf("%d\t%d\t%d\t%d\t%d\t%d\n", 
-               p[i].pid, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
-    }
-    
-    printf("\nAverage Turnaround Time: %.2f", total_tat/n);
-    printf("\nAverage Waiting Time: %.2f\n", total_wt/n);
-}
-
-void sjf(Process p[], int n) {
-    printf("\n=== SJF SCHEDULING ===\n");
-    
-    int completed = 0, current_time = 0;
-    int is_completed[n];
-    for(int i = 0; i < n; i++) is_completed[i] = 0;
-    
-    while(completed != n) {
-        int idx = -1, min_bt = INT_MAX;
-        
-        // Find process with minimum burst time that has arrived
-        for(int i = 0; i < n; i++) {
-            if(p[i].at <= current_time && !is_completed[i]) {
-                if(p[i].bt < min_bt) {
-                    min_bt = p[i].bt;
-                    idx = i;
-                }
-            }
-        }
-        
-        if(idx != -1) {
-            current_time += p[idx].bt;
-            p[idx].ct = current_time;
-            is_completed[idx] = 1;
-            completed++;
-        } else {
-            current_time++;
-        }
-    }
-    
-    displayResults(p, n);
-}
 
 int main() {
     int n;
     printf("Enter number of processes: ");
-    if(scanf("%d", &n) != 1 || n <= 0) {
-        printf("Invalid number of processes.\n");
-        return 1;
-    }
+    scanf("%d", &n);
 
-    Process *p = (Process *)malloc(sizeof(Process) * n);
-    if(!p) {
-        printf("Memory allocation failed.\n");
-        return 1;
-    }
+    int pid[20], at[20], bt[20], ct[20], tat[20], wt[20];
+    int done[20] = {0};
+    float avg_tat = 0, avg_wt = 0;
 
     for(int i = 0; i < n; i++) {
-        p[i].pid = i + 1;
-        printf("Enter arrival time and burst time for process %d: ", p[i].pid);
-        if(scanf("%d %d", &p[i].at, &p[i].bt) != 2) {
-            printf("Invalid input.\n");
-            free(p);
-            return 1;
-        }
-        p[i].priority = 0;
-        p[i].ct = 0;
-        p[i].tat = 0;
-        p[i].wt = 0;
-        p[i].remaining = p[i].bt;
+        pid[i] = i + 1;
+        printf("Enter Arrival Time and Burst Time for P%d: ", i + 1);
+        scanf("%d%d", &at[i], &bt[i]);
     }
 
-    sjf(p, n);
+    int completed = 0, current_time = 0;
 
-    free(p);
+    while(completed < n) {
+        int idx = -1, min_bt = INT_MAX;
+
+        // Find process with smallest burst time among arrived ones
+        for(int i = 0; i < n; i++) {
+            if(at[i] <= current_time && done[i] == 0 && bt[i] < min_bt) {
+                min_bt = bt[i];
+                idx = i;
+            }
+        }
+
+        if(idx != -1) {
+            current_time += bt[idx];
+            ct[idx] = current_time;
+            done[idx] = 1;
+            completed++;
+        } else {
+            current_time++; // CPU idle
+        }
+    }
+
+    printf("\nPID\tAT\tBT\tCT\tTAT\tWT\n");
+    for(int i = 0; i < n; i++) {
+        tat[i] = ct[i] - at[i];
+        wt[i] = tat[i] - bt[i];
+        avg_tat += tat[i];
+        avg_wt += wt[i];
+        printf("%d\t%d\t%d\t%d\t%d\t%d\n", pid[i], at[i], bt[i], ct[i], tat[i], wt[i]);
+    }
+
+    printf("\nAverage Turnaround Time: %.2f", avg_tat / n);
+    printf("\nAverage Waiting Time: %.2f\n", avg_wt / n);
+
     return 0;
 }

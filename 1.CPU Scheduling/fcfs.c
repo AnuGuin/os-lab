@@ -1,97 +1,52 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-
-// Structure to represent a process
-typedef struct {
-    int pid;        // Process ID
-    int at;         // Arrival Time
-    int bt;         // Burst Time
-    int priority;   // Priority (lower value = higher priority)
-    int ct;         // Completion Time
-    int tat;        // Turnaround Time
-    int wt;         // Waiting Time
-    int remaining;  // Remaining burst time (for RR)
-} Process;
-
-// Function to calculate and display results
-void displayResults(Process p[], int n) {
-    printf("\nPID\tAT\tBT\tCT\tTAT\tWT\n");
-    float total_tat = 0, total_wt = 0;
-    
-    for(int i = 0; i < n; i++) {
-        p[i].tat = p[i].ct - p[i].at;
-        p[i].wt = p[i].tat - p[i].bt;
-        total_tat += p[i].tat;
-        total_wt += p[i].wt;
-        
-        printf("%d\t%d\t%d\t%d\t%d\t%d\n", 
-               p[i].pid, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
-    }
-    
-    printf("\nAverage Turnaround Time: %.2f", total_tat/n);
-    printf("\nAverage Waiting Time: %.2f\n", total_wt/n);
-}
-
-// 1a) FCFS (First Come First Serve)
-void fcfs(Process p[], int n) {
-    printf("\n=== FCFS SCHEDULING ===\n");
-    
-    // Sort by arrival time
-    for(int i = 0; i < n-1; i++) {
-        for(int j = 0; j < n-i-1; j++) {
-            if(p[j].at > p[j+1].at) {
-                Process temp = p[j];
-                p[j] = p[j+1];
-                p[j+1] = temp;
-            }
-        }
-    }
-    
-    int current_time = 0;
-    for(int i = 0; i < n; i++) {
-        if(current_time < p[i].at)
-            current_time = p[i].at;
-        
-        current_time += p[i].bt;
-        p[i].ct = current_time;
-    }
-    
-    displayResults(p, n);
-}
 
 int main() {
     int n;
     printf("Enter number of processes: ");
-    if(scanf("%d", &n) != 1 || n <= 0) {
-        printf("Invalid number of processes.\n");
-        return 1;
-    }
+    scanf("%d", &n);
 
-    Process *p = (Process *)malloc(sizeof(Process) * n);
-    if(!p) {
-        printf("Memory allocation failed.\n");
-        return 1;
-    }
+    int at[20], bt[20], ct[20], tat[20], wt[20];
+    int pid[20];
+    float avg_tat = 0, avg_wt = 0;
 
     for(int i = 0; i < n; i++) {
-        p[i].pid = i + 1;
-        printf("Enter arrival time and burst time for process %d: ", p[i].pid);
-        if(scanf("%d %d", &p[i].at, &p[i].bt) != 2) {
-            printf("Invalid input.\n");
-            free(p);
-            return 1;
-        }
-        p[i].priority = 0;
-        p[i].ct = 0;
-        p[i].tat = 0;
-        p[i].wt = 0;
-        p[i].remaining = p[i].bt;
+        pid[i] = i + 1;
+        printf("Enter Arrival Time and Burst Time for P%d: ", i + 1);
+        scanf("%d%d", &at[i], &bt[i]);
     }
 
-    fcfs(p, n);
+    for(int i = 0; i < n - 1; i++) {
+        for(int j = 0; j < n - i - 1; j++) {
+            if(at[j] > at[j + 1]) {
+                int temp;
+                temp = at[j]; at[j] = at[j + 1]; at[j + 1] = temp;
+                temp = bt[j]; bt[j] = bt[j + 1]; bt[j + 1] = temp;
+                temp = pid[j]; pid[j] = pid[j + 1]; pid[j + 1] = temp;
+            }
+        }
+    }
 
-    free(p);
+    // FCFS logic
+    int current_time = 0;
+    for(int i = 0; i < n; i++) {
+        if(current_time < at[i])
+            current_time = at[i];
+        current_time += bt[i];
+        ct[i] = current_time;
+        tat[i] = ct[i] - at[i];
+        wt[i] = tat[i] - bt[i];
+        avg_tat += tat[i];
+        avg_wt += wt[i];
+    }
+
+    // Display results
+    printf("\nPID\tAT\tBT\tCT\tTAT\tWT\n");
+    for(int i = 0; i < n; i++) {
+        printf("%d\t%d\t%d\t%d\t%d\t%d\n", pid[i], at[i], bt[i], ct[i], tat[i], wt[i]);
+    }
+
+    printf("\nAverage Turnaround Time: %.2f", avg_tat / n);
+    printf("\nAverage Waiting Time: %.2f\n", avg_wt / n);
+
     return 0;
 }
-
