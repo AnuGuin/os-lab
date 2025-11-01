@@ -29,8 +29,10 @@ int main() {
     // FCFS logic
     int current_time = 0;
     for(int i = 0; i < n; i++) {
-        if(current_time < at[i])
-            current_time = at[i];
+        if(current_time < at[i]) {
+             current_time = at[i];
+        }
+           
         current_time += bt[i];
         ct[i] = current_time;
         tat[i] = ct[i] - at[i];
